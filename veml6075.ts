@@ -1,3 +1,8 @@
+/**
+ * Gives an access to VEML6075 UVA/B sensor.
+ */
+//% color=190 weight=100 icon="\uf185" block="VEML6075 extension"
+//% groups=['Setters', 'Getters', 'Sensor configuration', 'others']
 namespace veml6075 {
 
 	let addr: uint8 = (0x10); ///< I2C address (cannot be changed)
@@ -16,7 +21,7 @@ namespace veml6075 {
 		reg: uint16; // The raw 16 bit register data
 	  
 		constructor() {
-			this.SD = 			false;
+			this.SD = 			false;	
 			this.UV_AF = 		false;
 			this.UV_TRIG = 		false;
 			this.UV_HD = 		false;
@@ -60,16 +65,22 @@ namespace veml6075 {
 	}
 	
 
-	enum integration_time {
+	export enum integration_time {
+		//% block="50 ms"
 		t50ms,
+		//% block="100 ms"
 		t100ms,
+		//% block="200 ms"
 		t200ms,
+		//% block="400 ms"
 		t400ms,
+		//% block="800 ms"
 		t800ms
 	}
+
 	
 
-	let _uva_response: number = default_coeficients.uva_response;
+	export let _uva_response: number = default_coeficients.uva_response;
 	let _uvb_response: number = default_coeficients.uvb_response;
 	
 	let _uva_a: number = default_coeficients.uva_a_coeff;
@@ -77,15 +88,18 @@ namespace veml6075 {
 	let _uvb_c: number = default_coeficients.uvb_c_coeff;
 	let _uvb_d: number = default_coeficients.uvb_d_coeff;
 
-
-	function begin(itime: integration_time = integration_time.t100ms,
+	//% blockId=veml_init
+	//% block="initialise sensor $address"
+	//% block.loc.cs="iniciuj senzor $address"
+	//% address.min=0 address.max=0x80 address.defl=0x10
+	export function begin(address: int8 = addr, itime: integration_time = integration_time.t100ms,
 		highDynamic: boolean = false, forcedReads: boolean = false): boolean {
-		
+		addr = address;
 		// Nastavení konfigurace
-		i2cWrite([<uint8>register.uva, 0]);
-		let _ID: uint16 = i2cRead();
+		i2c_write([<uint8>register.id, 0]);
+		let _ID: uint16 = i2c_read()																																															;
 
-		setCoefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff,
+		set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff,
 			default_coeficients.uvb_c_coeff, default_coeficients.uvb_d_coeff,
 			default_coeficients.uva_response, default_coeficients.uvb_response);
 			
@@ -97,39 +111,79 @@ namespace veml6075 {
 	}
 
 
+	//% blockId=veml_void_init
+	//% block="initialise sensor $address"
+	//% block.loc.cs="iniciuj senzor $address"
+	//% address.min=0 address.max=0x80 address.defl=0x10
+	export function begin_void(address: int8 = addr): void {
+		begin(address);
+	}
 
-	function setIntegrationTime(itime: integration_time): void {
+
+	//% blockId=veml_it_set
+	//% block="set integration_time to %itime"
+	//% block.loc.cs="nastav čas integrace na %itime"
+	export function set_integration_time(itime: integration_time): void {
 		cr.UV_IT = <uint8>itime;
 		_read_delay = 25 * (2 << itime);
+		set_config();
+	}
+
+	//% blockId=veml_it_get
+	//% block="integration time"
+	//% block.loc.cs="čas integrace"
+	export function get_integration_time(): integration_time {
+		return cr.UV_IT;
+	}
+
+	//% blockId=veml_it_set
+	//% block="set integration_time at least to $itime"
+	//% block.loc.cs="nastav čas integrace aspoň na $itime"
+	//% itime.min=0 itime.max=800 itime.dflv=100
+	export function set_integration_time_at_least(itime: integration_time): void {
+		cr.UV_IT = <uint8>itime;
+		_read_delay = 25 * (2 << itime);
+		set_config();
+	}
+
+	//% blockId=veml_hd_set
+	//% block="set high_dynamic to $hd"
+	//% block.loc.cs="nastav high_dynamic na $hd"
+	export function setHighDynamic(hd: boolean = true): void {
+		cr.UV_HD = hd;
+		set_config();
+	}
+
+	//% blockId=veml_hd_get
+	//% block="high_dynamic"
+	//% block.loc.cs="high_dynamic"
+	export function getHighDynamic(): boolean {
+		return cr.UV_HD;
+	}
+
+	//% blockId=veml_fm_set
+	//% block="set force mode to $flag"
+	//% block.loc.cs="nastav force mód na $flag"
+	function set_forced_mode(flag: boolean = true): void {
+		cr.UV_TRIG = flag;
+		set_config();
+	}
+	
+	//% blockId=veml_fm_get
+	//% block="forced mode"
+	//% block.loc.cs="force mód"
+	function get_forced_mode(): boolean {
+		return cr.UV_TRIG;
+	}
+
+	function set_config(): void {
+		let reg: uint16 = cr.get_reg();
+		i2c_write([<uint8>(reg >> 8), <uint8>(reg & 255)]);
 	}
 
 
-	function getIntegrationTime(): integration_time {
-		return integration_time.t100ms;
-	}
 
-
-	function setHighDynamic(hd: boolean): void {
-
-	}
-
-
-	function getHighDynamic(): boolean {
-
-	}
-
-
-	function setForcedMode(flag: boolean): void {
-
-	}
-
-
-	function getForcedMode(): boolean {
-
-	}
-
-
-	function setCoefficients(UVA_A: number, UVA_B: number, UVB_C: number, UVB_D: number,
+	export function set_coefficients(UVA_A: number, UVA_B: number, UVB_C: number, UVB_D: number,
 							UVA_response: number, UVB_response: number): void {
 		_uva_a = 		UVA_A;
 		_uva_b = 		UVA_B;
@@ -139,44 +193,48 @@ namespace veml6075 {
 		_uvb_response = UVB_response;
 	}
 
-
-	function readUVA(): number {
+	//% blockId=veml_get_UVA
+	//% block="UVA"
+	export function readUVA(): number {
 		take_reading();
 		return _uva;
 	}
 
-
-	function readUVB(): number {
+	//% blockId=veml_get_UVB
+	//% block="UVB"
+	export function readUVB(): number {
 		take_reading();
 		return _uvb;
 	}
 
-
-	function readUVI(): number {
+	//% blockId=veml_get_index
+	//% block="UV index"
+	export function readUVI(): number {
 		take_reading();
-		
 		return ((_uva * _uva_response) + (_uvb * _uvb_response)) / 2;
 	}
 
-
-	function read_UVABI(a: number, b: number, i: number): number[] {
+	//% blockId=veml_get_all
+	//% block="all UV data"
+	//% block.loc.cs="všechny UV data"
+	export function read_UVABI(): number[] {
 		take_reading();
 		return [_uva, _uvb, ((_uva * _uva_response) + (_uvb * _uvb_response)) / 2];
 	}
 
 
 	function take_reading(): void {
-		i2cWrite([<uint8>register.uva, 0]);
-		let _uva_raw: uint16 = i2cRead();
+		i2c_write([<uint8>register.uva, 0]);
+		let _uva_raw: uint16 = i2c_read();
 
-		i2cWrite([<uint8>register.uvb, 0]);
-		let _uvb_raw: uint16 = i2cRead();
+		i2c_write([<uint8>register.uvb, 0]);
+		let _uvb_raw: uint16 = i2c_read();
 
-		i2cWrite([<uint8>register.uvcomp1, 0]);
-		let _uvcomp1: uint16 = i2cRead();
+		i2c_write([<uint8>register.uvcomp1, 0]);
+		let _uvcomp1: uint16 = i2c_read();
 
-		i2cWrite([<uint8>register.uvcomp2, 0]);
-		let _uvcomp2: uint16 = i2cRead();
+		i2c_write([<uint8>register.uvcomp2, 0]);
+		let _uvcomp2: uint16 = i2c_read();
 
 		_uva = _uva_raw - (_uva_a * _uvcomp1) - (_uva_b * _uvcomp2);
   		_uvb = _uvb_raw - (_uvb_c * _uvcomp1) - (_uvb_d * _uvcomp2);
@@ -184,40 +242,14 @@ namespace veml6075 {
 
 
 	// Odeslání zprávy na I2C sběrnici
-	function i2cWrite(data: uint8[]) {
+	function i2c_write(data: uint8[]) {
 		pins.i2cWriteBuffer(addr, pins.createBufferFromArray(data));
 	}
 
 
 	// Přečtení odpovědi ze senzoru přes I2C sběrnici
-	function i2cRead(): uint16 {
+	function i2c_read(): uint16 {
 		return pins.i2cReadBuffer(addr, 2).toArray(NumberFormat.Int16LE)[0];
 	}
-
-
-	// Získání hodnoty UV indexu z VEML6075
-	function getUVIndex(): number {
-		// Zaslání příkazu pro čtení hodnoty
-		i2cWrite([0x03]);
-
-		// Přečtení odpovědi
-		const data = i2cRead();
-		const uvIndex = (data[0] << 8) | data[1];
-
-		return uvIndex;
-	}
-
-
-	// Inicializace VEML6075 při spuštění
-	init();
-
-	// Kód, ve kterém můžete použít získané hodnoty
-	basic.forever(function () {
-		// Získání a zobrazení hodnoty UV indexu
-		const uvIndex = getUVIndex();
-		basic.showNumber(uvIndex);
-
-		basic.pause(1000);
-	});
 
 }
