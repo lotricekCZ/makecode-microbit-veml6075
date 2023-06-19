@@ -1,8 +1,8 @@
 /**
  * Gives an access to VEML6075 UVA/B sensor.
  */
-//% color=190 weight=100 icon="\uf185" block="VEML6075 extension"
-//% groups=['Setters', 'Getters', 'Sensor configuration', 'others']
+//% color=#ecac05 weight=100 icon="\uf185" block="VEML6075 extension"
+//% groups=['Setters', 'Getters', 'Control', 'others']
 namespace veml6075 {
 
 	let addr: uint8 = (0x10); ///< I2C address (cannot be changed)
@@ -67,20 +67,41 @@ namespace veml6075 {
 
 	export enum integration_time {
 		//% block="50 ms"
-		t50ms,
+		t50ms = 0,
 		//% block="100 ms"
-		t100ms,
+		t100ms = 1,
 		//% block="200 ms"
-		t200ms,
+		t200ms = 2,
 		//% block="400 ms"
-		t400ms,
+		t400ms = 3,
 		//% block="800 ms"
-		t800ms
+		t800ms = 4
 	}
 
+
+	export enum veml_var {
+		//% block="UVA"
+		uva,
+		//% block="UVB"
+		uvb,
+		//% block="UV Index"
+		uvi,
+		//% block="all UV data"
+		all_variables,
+		//% block="coefficients"
+		coeffs,
+		//% block="responses"
+		resps,
+		//% block="high dynamic"
+		high_dynamic,
+		//% block="forced"
+		forced_mode,
+		//% block="integration time"
+		integration_time
+	}
 	
 
-	export let _uva_response: number = default_coeficients.uva_response;
+	let _uva_response: number = default_coeficients.uva_response;
 	let _uvb_response: number = default_coeficients.uvb_response;
 	
 	let _uva_a: number = default_coeficients.uva_a_coeff;
@@ -92,6 +113,7 @@ namespace veml6075 {
 	//% block="initialise sensor $address"
 	//% block.loc.cs="iniciuj senzor $address"
 	//% address.min=0 address.max=0x80 address.defl=0x10
+	//% group="Control"
 	export function begin(address: int8 = addr, itime: integration_time = integration_time.t100ms,
 		highDynamic: boolean = false, forcedReads: boolean = false): boolean {
 		addr = address;
@@ -115,72 +137,125 @@ namespace veml6075 {
 	//% block="initialise sensor $address"
 	//% block.loc.cs="iniciuj senzor $address"
 	//% address.min=0 address.max=0x80 address.defl=0x10
+	//% group="Control"
 	export function begin_void(address: int8 = addr): void {
 		begin(address);
 	}
 
+	//% blockId=veml_get
+	//% block="get %var"
+	//% block.loc.cs="načti %var"
+	//% group="Getters"
+	export function get(variable: veml_var) {
+		switch (variable) {
+			case veml_var.uva: {
+				return readUVA();
+			}
+			case veml_var.uvb: {
+				return readUVA();
+			}
+			case veml_var.uvi: {
+				return readUVI();
+			}
+			case veml_var.all_variables:{
+				return readUVABI();
+			}
+			case veml_var.coeffs:{
+				return [_uva_a, _uva_b, _uvb_c, _uvb_d];
+			}
+			case veml_var.resps:{
+				return [_uva_response, _uvb_response];
+			}
+			case veml_var.high_dynamic:{
+				return cr.UV_HD;
+			}
+			case veml_var.forced_mode:{
+				return cr.UV_TRIG;
+			}
+			case veml_var.integration_time:{
+				return _read_delay;
+			}
+		}
+	}
 
 	//% blockId=veml_it_set
 	//% block="set integration_time to %itime"
 	//% block.loc.cs="nastav čas integrace na %itime"
+	//% group="Setters"
 	export function set_integration_time(itime: integration_time): void {
 		cr.UV_IT = <uint8>itime;
 		_read_delay = 25 * (2 << itime);
 		set_config();
 	}
 
-	//% blockId=veml_it_get
-	//% block="integration time"
-	//% block.loc.cs="čas integrace"
-	export function get_integration_time(): integration_time {
-		return cr.UV_IT;
-	}
-
-	//% blockId=veml_it_set
-	//% block="set integration_time at least to $itime"
-	//% block.loc.cs="nastav čas integrace aspoň na $itime"
+	//% blockId=veml_it_set_at_least
+	//% block="set integration_time to at least $itime ms"
+	//% block.loc.cs="nastav čas integrace aspoň na $itime ms"
 	//% itime.min=0 itime.max=800 itime.dflv=100
-	export function set_integration_time_at_least(itime: integration_time): void {
-		cr.UV_IT = <uint8>itime;
-		_read_delay = 25 * (2 << itime);
+	//% group="Setters"
+	export function set_integration_time_at_least(itime: uint16): void {
+		_read_delay = 50;
+		
+		for (let i: uint8 = 0; i < <uint8>integration_time.t800ms; i++) {
+			if (_read_delay > itime || i == <uint8>integration_time.t800ms) {
+				cr.UV_IT = i;
+				break;
+			}
+			_read_delay *= 2;
+		}
 		set_config();
 	}
 
+	//% blockId=veml_it_get
+	//% block="integration time"
+	//% block.loc.cs="čas integrace"
+	//% group="Getters"
+	export function get_integration_time(): integration_time {
+		return cr.UV_IT;
+	}
+	
 	//% blockId=veml_hd_set
 	//% block="set high_dynamic to $hd"
 	//% block.loc.cs="nastav high_dynamic na $hd"
-	export function setHighDynamic(hd: boolean = true): void {
+	//% group="Setters"
+	export function set_high_dynamic(hd: boolean = true): void {
 		cr.UV_HD = hd;
 		set_config();
 	}
 
+
 	//% blockId=veml_hd_get
 	//% block="high_dynamic"
 	//% block.loc.cs="high_dynamic"
-	export function getHighDynamic(): boolean {
+	//% group="Getters"
+	export function get_high_dynamic(): boolean {
 		return cr.UV_HD;
 	}
+
 
 	//% blockId=veml_fm_set
 	//% block="set force mode to $flag"
 	//% block.loc.cs="nastav force mód na $flag"
+	//% group="Setters"
 	function set_forced_mode(flag: boolean = true): void {
 		cr.UV_TRIG = flag;
 		set_config();
 	}
 	
+
 	//% blockId=veml_fm_get
 	//% block="forced mode"
 	//% block.loc.cs="force mód"
+	//% group="Getters"
 	function get_forced_mode(): boolean {
 		return cr.UV_TRIG;
 	}
+
 
 	function set_config(): void {
 		let reg: uint16 = cr.get_reg();
 		i2c_write([<uint8>(reg >> 8), <uint8>(reg & 255)]);
 	}
-
 
 
 	export function set_coefficients(UVA_A: number, UVA_B: number, UVB_C: number, UVB_D: number,
@@ -195,6 +270,7 @@ namespace veml6075 {
 
 	//% blockId=veml_get_UVA
 	//% block="UVA"
+	//% group="Getters"
 	export function readUVA(): number {
 		take_reading();
 		return _uva;
@@ -202,6 +278,7 @@ namespace veml6075 {
 
 	//% blockId=veml_get_UVB
 	//% block="UVB"
+	//% group="Getters"
 	export function readUVB(): number {
 		take_reading();
 		return _uvb;
@@ -209,6 +286,7 @@ namespace veml6075 {
 
 	//% blockId=veml_get_index
 	//% block="UV index"
+	//% group="Getters"
 	export function readUVI(): number {
 		take_reading();
 		return ((_uva * _uva_response) + (_uvb * _uvb_response)) / 2;
@@ -217,7 +295,8 @@ namespace veml6075 {
 	//% blockId=veml_get_all
 	//% block="all UV data"
 	//% block.loc.cs="všechny UV data"
-	export function read_UVABI(): number[] {
+	//% group="Getters"
+	export function readUVABI(): number[] {
 		take_reading();
 		return [_uva, _uvb, ((_uva * _uva_response) + (_uvb * _uvb_response)) / 2];
 	}

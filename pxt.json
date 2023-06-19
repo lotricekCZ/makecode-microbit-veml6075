@@ -1,0 +1,13 @@
+{
+    "name": "veml6075",
+    "version": "0.0.0",
+    "files": [
+        "veml6075.ts"
+    ],
+    "supportedTargets": [
+        "microbit" 
+    ],
+    "dependencies": {
+        "device": "*"
+    }
+}
