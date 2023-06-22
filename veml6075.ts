@@ -10,6 +10,10 @@ namespace veml6075 {
 	let _uva: number = 0;
 	let _uvb: number = 0;
 
+
+	/**
+ 	* Class to store settings
+ 	*/
 	class command_register {
 		public SD: boolean;			// Shut Down
 		public UV_AF: boolean;		// Auto or forced
@@ -113,10 +117,12 @@ namespace veml6075 {
 		exceeds,
 		//% block="drops below"
 		drops_below,
-		//% block="drops below"
+		//% block="falls to"
 		falls_to,
 		//% block="="
-		equals
+		equals,
+		//% block="rises to"
+		rises_to
 	}
 
 
@@ -142,28 +148,48 @@ namespace veml6075 {
 	}
 	
 
+
+ /**
+  * Initiates sensor and communication
+  * @param {uint8} address i2c address
+  * @param {integration_time} itime=integration_time.t100ms integration time (currently unused)
+  * @param {boolean} high_dynamic=false
+  * @param {boolean} forced_reads=false
+  * @returns {boolean} whether the ID in the register matches expected ID or not
+  */
+	
 	//% blockId=veml_init
 	//% block="initialise sensor $address"
 	//% block.loc.cs="iniciuj senzor $address"
 	//% address.min=0 address.max=0x80 address.defl=0x10
 	//% group="Control"
 	export function begin(address = addr, itime: integration_time = integration_time.t100ms,
-		highDynamic: boolean = false, forcedReads: boolean = false): boolean {
-		addr = address;
-		// Nastavení konfigurace
+		high_dynamic: boolean = false, forced_reads: boolean = false): boolean {
+		
+		addr = address % 127;
 		i2c_write([<uint8>register.id, 0]);
 		let _ID = i2c_read();
-
+		
 		set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff,
 			default_coeficients.uvb_c_coeff, default_coeficients.uvb_d_coeff,
 			default_coeficients.uva_response, default_coeficients.uvb_response);
-
+			
+		// TODO: Elegant solution
+		set_integration_time(itime);
+		set_forced_mode(forced_reads);
+		set_high_dynamic(high_dynamic);
 		
-		// Čekání na inicializaci
 		return _ID === _veml_id;
 	}
 
 
+	
+ /**
+  * Normal sensor and communication initiation
+  * @param {uint8} address i2c address
+  * @returns {void}
+  */
+	
 	//% blockId=veml_void_init
 	//% block="initialise sensor $address"
 	//% block.loc.cs="iniciuj senzor $address"
@@ -173,6 +199,13 @@ namespace veml6075 {
 		begin(address);
 	}
 
+
+ /**
+  * Get any numerical value via unified interface
+  * @param {veml_fn_get_number} variable variable we want to query
+  * @returns {number} result we get
+  */
+	
 	//% blockId=veml_get_number
 	//% block="numeric value of %variable"
 	//% block.loc.cs="číselná hodnota %variable"
@@ -213,6 +246,12 @@ namespace veml6075 {
 	}
 
 
+ /**
+  * Get any boolean value via unified interface
+  * @param {veml_fn_get_bool} bool bool we want to query
+  * @returns {boolean} result we get
+  */
+	
 	//% blockId=veml_get_bool
 	//% block="logical value of %bool"
 	//% block.loc.cs="logická hodnota %bool"
@@ -229,11 +268,19 @@ namespace veml6075 {
 	}
 
 
+/**
+ * Get any boolean value via unified interface. Uses C-style bool evaluation 
+ * (anything not equal to 0 is deemed to be true) for functions with boolean parameters.
+ * @param {veml_fn_set} variable variable we want to assign new value
+ * @param {any} val the new value
+ * @returns {void}
+ */
+
 	//% blockId=veml_set
 	//% block="set %variable to $val"
 	//% block.loc.cs="nastav %variable na $val"
 	//% group="Setters"
-	export function set(variable: veml_fn_set, val: number) {
+	export function set(variable: veml_fn_set, val: number): void {
 		switch (variable) {
 			case veml_fn_set.uva_a_coeff: {
 				set_coefficients(<number>val, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
@@ -280,6 +327,14 @@ namespace veml6075 {
 		}
 	}
 
+
+
+ /**
+  * Sets integration time
+  * @param {integration_time} itime new integration time
+  * @returns {void}
+  */
+	
 	//% blockId=veml_it_set
 	//% block="set integration_time to %itime"
 	//% block.loc.cs="nastav čas integrace na %itime"
@@ -290,16 +345,24 @@ namespace veml6075 {
 		set_config();
 	}
 
+
+ /**
+  * Iterates the integration_time options and stops if the itime
+  * is either matched or smaller than the integration_time
+  * @param {number} itime
+  * @returns {void}
+  */
+	
 	//% blockId=veml_it_set_at_least
 	//% block="set integration_time to at least $itime ms"
 	//% block.loc.cs="nastav čas integrace aspoň na $itime ms"
 	//% itime.min=0 itime.max=800 itime.dflv=100
 	//% group="Setters"
-	export function set_integration_time_at_least(itime = 100): void {
+	export function set_integration_time_at_least(itime: number = 100): void {
 		_read_delay = 50;
 
 		for (let i = 0; i < <uint8>integration_time.t800ms; i++) {
-			if (_read_delay > itime || i == <uint8>integration_time.t800ms) {
+			if (_read_delay >= itime || i == <uint8>integration_time.t800ms) {
 				comm_reg.UV_IT = i;
 				break;
 			}
@@ -307,6 +370,8 @@ namespace veml6075 {
 		}
 		set_config();
 	}
+
+
 
 	//% blockId=veml_it_get
 	//% block="integration time"
@@ -354,11 +419,28 @@ namespace veml6075 {
 	}
 
 
+ /**
+  * Sends the current register config to the sensor
+  * @returns {void}
+  */
+	
 	function set_config(): void {
 		let reg = comm_reg.get_reg();
 		i2c_write([<uint8>(reg >> 8), <uint8>(reg & 255)]);
 	}
 
+
+ /**
+  * Assigns the given coefficients globally
+  * @param {number} UVA_A coefficient assigned
+  * @param {number} UVA_B coefficient assigned
+  * @param {number} UVB_C coefficient assigned
+  * @param {number} UVB_D coefficient assigned
+  * @param {number} UVA_response coefficient assigned
+  * @param {number} UVB_response coefficient assigned
+  * @returns {void}
+  */
+	
 	//% blockId=veml_cf_set
 	//% block="set coefficients|UVA A to $UVA_A|UVA B to $UVA_B|UVB C to $UVB_C|UVB D to $UVB_D|response UVA to $UVA_response|response UVB to $UVB_response"
 	//% group="Setters"
@@ -372,6 +454,7 @@ namespace veml6075 {
 		default_coeficients.uvb_response = <number>UVB_response;
 	}
 
+
 	//% blockId=veml_get_UVA
 	//% block="UVA"
 	//% group="Getters"
@@ -379,6 +462,7 @@ namespace veml6075 {
 		take_reading();
 		return _uva;
 	}
+
 
 	//% blockId=veml_get_UVB
 	//% block="UVB"
@@ -388,6 +472,7 @@ namespace veml6075 {
 		return _uvb;
 	}
 
+
 	//% blockId=veml_get_index
 	//% block="UV index"
 	//% group="Getters"
@@ -395,6 +480,7 @@ namespace veml6075 {
 		take_reading();
 		return ((_uva * default_coeficients.uva_response) + (_uvb * default_coeficients.uvb_response)) / 2;
 	}
+
 
 	//% blockId=veml_get_all
 	//% block="all UV data"
@@ -405,18 +491,44 @@ namespace veml6075 {
 		return [_uva, _uvb, ((_uva * default_coeficients.uva_response) + (_uvb * default_coeficients.uvb_response)) / 2];
 	}
 
+	
+ /**
+  * A simple interface to activate certain interrupt-like procedure when something occurs
+  * @param {veml_fn_get_number} variable variable we want to query
+  * @param {veml_fn_on_event} condition comparator
+  * @param {number} value value we check against
+  * @param {function} handler function activated when the given condition was valid
+  * @returns {void}
+  */
+	
 	//% blockId=veml_on_event
 	//% block="if %variable %quantificator $value"
-	export function on_event(variable: veml_fn_get_number, quantificator: veml_fn_on_event, value: number, handler: () => void) {
-		// Code to handle the button press event
-		control.onEvent(_veml_id, variable, handler);
+	export function on_event(variable: veml_fn_get_number, condition: veml_fn_on_event, value: number, handler: () => void) {
+		// Quite frankly not sure whether this thing is needed.
+		control.onEvent(_veml_id, variable, handler); // perhaps incomplete and might gonna need to be separate for other cases.
 		control.runInBackground(() => {
 			while(true) {
-				const resolution = get_variable_number(variable);
+				let resolution = get_variable_number(variable);
 				let is_met = false;
-				if (key != lastJoystick) {
-					lastJoystick = key; 
-					control.raiseEvent(joystickEventID, lastJoystick);
+				switch (condition) {
+					case veml_fn_on_event.exceeds:
+						is_met = (resolution > value);
+						break;
+					case veml_fn_on_event.drops_below:
+						is_met = (resolution < value);
+						break;
+					case veml_fn_on_event.falls_to:
+						is_met = (resolution <= value);
+						break;
+					case veml_fn_on_event.equals:
+						is_met = (resolution == value);
+						break;
+					case veml_fn_on_event.rises_to:
+						is_met = (resolution >= value);
+						break;
+				}
+				if (is_met) {
+					control.raiseEvent(_veml_id, resolution);
 				}
 				basic.pause(200);
 			}
@@ -424,6 +536,10 @@ namespace veml6075 {
 	}
 
 
+/**
+ * Function we call every time to gain current UV light info
+ * @returns {void}
+ */
 
 	function take_reading(): void {
 		i2c_write([<uint8>register.uva, 0]);
