@@ -37,7 +37,7 @@ namespace veml6075 {
 	}
 
 
-	let cr: command_register;
+	let comm_reg: command_register;
 
 
 	enum register {
@@ -76,7 +76,7 @@ namespace veml6075 {
 	}
 
 
-	export enum veml_function_get_number {
+	export enum veml_fn_get_number {
 		//% block="UVA"
 		uva,
 		//% block="UVB"
@@ -99,7 +99,28 @@ namespace veml6075 {
 		integration_time
 	}
 
-	export enum veml_function_set {
+
+	export enum veml_fn_get_bool {
+		//% block="high dynamic"
+		high_dynamic,
+		//% block="forced mode"
+		forced_mode
+	}
+
+
+	export enum veml_fn_on_event {
+		//% block="exceeds"
+		exceeds,
+		//% block="drops below"
+		drops_below,
+		//% block="drops below"
+		falls_to,
+		//% block="="
+		equals
+	}
+
+
+	export enum veml_fn_set {
 		//% block="UVA coefficient A"
 		uva_a_coeff,
 		//% block="UVA coefficient B"
@@ -152,90 +173,107 @@ namespace veml6075 {
 		begin(address);
 	}
 
-	//% blockId=veml_get
+	//% blockId=veml_get_number
 	//% block="numeric value of %variable"
 	//% block.loc.cs="číselná hodnota %variable"
 	//% group="Getters"
-	export function get_variable(variable: veml_function_get_number): number {
+	export function get_variable_number(variable: veml_fn_get_number): number {
 		switch (variable) {
-			case veml_function_get_number.uva: {
+			case veml_fn_get_number.uva: {
 				return readUVA();
 			}
-			case veml_function_get_number.uvb: {
+			case veml_fn_get_number.uvb: {
 				return readUVA();
 			}
-			case veml_function_get_number.uvi: {
+			case veml_fn_get_number.uvi: {
 				return readUVI();
 			}
-			case veml_function_get_number.uva_a_coeff: {
+			case veml_fn_get_number.uva_a_coeff: {
 				return default_coeficients.uva_a_coeff;
 			}
-			case veml_function_get_number.uva_b_coeff: {
+			case veml_fn_get_number.uva_b_coeff: {
 				return default_coeficients.uva_b_coeff;
 			}
-			case veml_function_get_number.uvb_c_coeff: {
+			case veml_fn_get_number.uvb_c_coeff: {
 				return default_coeficients.uvb_c_coeff;
 			}
-			case veml_function_get_number.uvb_d_coeff: {
+			case veml_fn_get_number.uvb_d_coeff: {
 				return default_coeficients.uvb_d_coeff;
 			}
-			case veml_function_get_number.uva_response: {
+			case veml_fn_get_number.uva_response: {
 				return <number> default_coeficients.uva_response;
 			}
-			case veml_function_get_number.uvb_response: {
+			case veml_fn_get_number.uvb_response: {
 				return <number> default_coeficients.uvb_response;
 			}
-			case veml_function_get_number.integration_time: {
+			case veml_fn_get_number.integration_time: {
 				return _read_delay;
 			}
 		}
 	}
 
+
+	//% blockId=veml_get_bool
+	//% block="logical value of %bool"
+	//% block.loc.cs="logická hodnota %bool"
+	//% group="Getters"
+	export function get_variable_bool(bool: veml_fn_get_bool): boolean {
+		switch (bool) {
+			case veml_fn_get_bool.high_dynamic: {
+				return get_high_dynamic();
+			}
+			case veml_fn_get_bool.forced_mode: {
+				return get_forced_mode();
+			}
+		}
+	}
+
+
 	//% blockId=veml_set
 	//% block="set %variable to $val"
 	//% block.loc.cs="nastav %variable na $val"
 	//% group="Setters"
-	export function set(variable: veml_function_set, val: number) {
+	export function set(variable: veml_fn_set, val: number) {
 		switch (variable) {
-			case veml_function_set.uva_a_coeff: {
+			case veml_fn_set.uva_a_coeff: {
 				set_coefficients(<number>val, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
 					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, default_coeficients.uvb_response);
 				break;
 			}
-			case veml_function_set.uva_b_coeff: {
+			case veml_fn_set.uva_b_coeff: {
 				set_coefficients(default_coeficients.uva_a_coeff, <number>val, default_coeficients.uvb_c_coeff,
 					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, default_coeficients.uvb_response);
 				break;
 			}
-			case veml_function_set.uvb_c_coeff: {
+			case veml_fn_set.uvb_c_coeff: {
 				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, <number>val,
 					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, default_coeficients.uvb_response);
 				break;
 			}
-			case veml_function_set.uvb_d_coeff: {
+			case veml_fn_set.uvb_d_coeff: {
 				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
 					<number>val, default_coeficients.uva_response, default_coeficients.uvb_response);
 				break;
 			}
-			case veml_function_set.uva_response: {
+			case veml_fn_set.uva_response: {
 				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
 					default_coeficients.uvb_d_coeff, <number>val, default_coeficients.uvb_response);
 				break;
 			}
-			case veml_function_set.uvb_response: {
+			case veml_fn_set.uvb_response: {
 				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
 					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, <number>val);
 				break;
 			}
-			case veml_function_set.high_dynamic: {
+			case veml_fn_set.high_dynamic: {
 				set_high_dynamic(Math.abs(val) > 0);
 				break;
 			}
-			case veml_function_set.forced_mode: {
+			case veml_fn_set.forced_mode: {
 				set_forced_mode(Math.abs(val) > 0);
 				break;
 			}
-			case veml_function_set.integration_time: {
+			case veml_fn_set.integration_time: {
 				set_integration_time_at_least(<uint16>val);
 				break;
 			}
@@ -247,7 +285,7 @@ namespace veml6075 {
 	//% block.loc.cs="nastav čas integrace na %itime"
 	//% group="Setters"
 	export function set_integration_time(itime: integration_time): void {
-		cr.UV_IT = <uint8>itime;
+		comm_reg.UV_IT = <uint8>itime;
 		_read_delay = 25 * (2 << itime);
 		set_config();
 	}
@@ -262,7 +300,7 @@ namespace veml6075 {
 
 		for (let i = 0; i < <uint8>integration_time.t800ms; i++) {
 			if (_read_delay > itime || i == <uint8>integration_time.t800ms) {
-				cr.UV_IT = i;
+				comm_reg.UV_IT = i;
 				break;
 			}
 			_read_delay *= 2;
@@ -275,7 +313,7 @@ namespace veml6075 {
 	//% block.loc.cs="čas integrace"
 	//% group="Getters"
 	export function get_integration_time(): integration_time {
-		return cr.UV_IT;
+		return comm_reg.UV_IT;
 	}
 
 	//% blockId=veml_hd_set
@@ -283,7 +321,7 @@ namespace veml6075 {
 	//% block.loc.cs="nastav high_dynamic na $hd"
 	//% group="Setters"
 	export function set_high_dynamic(hd: boolean = true): void {
-		cr.UV_HD = hd;
+		comm_reg.UV_HD = hd;
 		set_config();
 	}
 
@@ -293,7 +331,7 @@ namespace veml6075 {
 	//% block.loc.cs="high_dynamic"
 	//% group="Getters"
 	export function get_high_dynamic(): boolean {
-		return cr.UV_HD;
+		return comm_reg.UV_HD;
 	}
 
 
@@ -302,7 +340,7 @@ namespace veml6075 {
 	//% block.loc.cs="nastav force mód na $flag"
 	//% group="Setters"
 	function set_forced_mode(flag: boolean = true): void {
-		cr.UV_TRIG = flag;
+		comm_reg.UV_TRIG = flag;
 		set_config();
 	}
 
@@ -312,12 +350,12 @@ namespace veml6075 {
 	//% block.loc.cs="force mód"
 	//% group="Getters"
 	function get_forced_mode(): boolean {
-		return cr.UV_TRIG;
+		return comm_reg.UV_TRIG;
 	}
 
 
 	function set_config(): void {
-		let reg = cr.get_reg();
+		let reg = comm_reg.get_reg();
 		i2c_write([<uint8>(reg >> 8), <uint8>(reg & 255)]);
 	}
 
@@ -366,6 +404,25 @@ namespace veml6075 {
 		take_reading();
 		return [_uva, _uvb, ((_uva * default_coeficients.uva_response) + (_uvb * default_coeficients.uvb_response)) / 2];
 	}
+
+	//% blockId=veml_on_event
+	//% block="if %variable %quantificator $value"
+	export function on_event(variable: veml_fn_get_number, quantificator: veml_fn_on_event, value: number, handler: () => void) {
+		// Code to handle the button press event
+		control.onEvent(_veml_id, variable, handler);
+		control.runInBackground(() => {
+			while(true) {
+				const resolution = get_variable_number(variable);
+				let is_met = false;
+				if (key != lastJoystick) {
+					lastJoystick = key; 
+					control.raiseEvent(joystickEventID, lastJoystick);
+				}
+				basic.pause(200);
+			}
+		})
+	}
+
 
 
 	function take_reading(): void {
