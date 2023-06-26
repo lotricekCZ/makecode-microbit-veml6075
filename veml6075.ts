@@ -2,7 +2,7 @@
  * Gives an access to VEML6075 UVA/B sensor.
  */
 //% color=#ecac05 weight=100 icon="\uf185" block="VEML6075 extension"
-//% groups=['Setters', 'Getters', 'Control', 'others']
+//% groups=['Setters', 'Getters', 'Control', 'others'];
 namespace veml6075 {
 	const _veml_id: uint8 = 0x26;
 	let addr: uint8 = (0x10); ///< I2C address (cannot be changed)
@@ -52,7 +52,7 @@ namespace veml6075 {
 		uvcomp1 = 	(0x0A),	///< UV1 compensation value
 		uvcomp2 = 	(0x0B),	///< UV2 compensation value
 		id = 		(0x0C)	///< Manufacture ID
-	}
+	};
 
 
 	let default_coeficients = {
@@ -77,7 +77,7 @@ namespace veml6075 {
 		t400ms = 3,
 		//% block="800 ms"
 		t800ms = 4
-	}
+	};
 
 
 	export enum veml_fn_get_number {
@@ -101,7 +101,7 @@ namespace veml6075 {
 		uvb_response,
 		//% block="integration time"
 		integration_time
-	}
+	};
 
 
 	export enum veml_fn_get_bool {
@@ -109,7 +109,7 @@ namespace veml6075 {
 		high_dynamic,
 		//% block="forced mode"
 		forced_mode
-	}
+	};
 
 
 	export enum veml_fn_on_event {
@@ -123,7 +123,7 @@ namespace veml6075 {
 		equals,
 		//% block="rises to"
 		rises_to
-	}
+	};
 
 
 	export enum veml_fn_set {
@@ -145,7 +145,7 @@ namespace veml6075 {
 		forced_mode,
 		//% block="integration time"
 		integration_time
-	}
+	};
 	
 
 
@@ -559,13 +559,22 @@ namespace veml6075 {
 	}
 
 
-
-	function i2c_write(data: uint8[]) {
+ 
+ /**
+  * Self explanatory, sends given packet of data.
+  * @param {uint8[]} data buffer to be sent
+  * @returns {void}
+  */
+	function i2c_write(data: uint8[]): void {
 		pins.i2cWriteBuffer(addr, pins.createBufferFromArray(data));
 	}
 
 
 
+ /**
+  * Again, self explanatory
+  * @returns {uint16} message received
+  */
 	function i2c_read(): uint16 {
 		return pins.i2cReadBuffer(addr, 2).toArray(NumberFormat.Int16LE)[0];
 	}

@@ -12,3 +12,8 @@ _site
 .simstate.json
 # github
 .github
+package.json
+package-lock.json
+.prettierrc
+mkc.json
+.vscode/

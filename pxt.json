@@ -1,13 +1,21 @@
 {
     "name": "veml6075",
-    "version": "0.0.0",
+    "version": "0.0.1",
+    "description": "Gives hopefully pretty straightforward interface for VEML6075 UVA/B sensor.",
+    "license": "WTFPL 2.0",
     "files": [
-        "veml6075.ts"
+        "veml6075.ts",
+        "README.md"
+    ],
+    "testFiles": [
+        "test.ts"
     ],
     "supportedTargets": [
         "microbit" 
     ],
     "dependencies": {
-        "device": "*"
+        "core": "*",
+        "radio": "*",
+        "microphone": "*"
     }
 }
