@@ -14,34 +14,32 @@ namespace veml6075 {
 	/**
  	* Class to store settings
  	*/
-	class command_register {
-		public SD: boolean;			// Shut Down
-		public UV_AF: boolean;		// Auto or forced
-		public UV_TRIG: boolean;	// Trigger forced mode
-		public UV_HD: boolean;		// High dynamic
-		public UV_IT: uint8;		// Integration Time
+	let command_register = {
+		SD: false,			// Shut Down
+		UV_AF: false,		// Auto or forced
+		UV_TRIG: false,	// Trigger forced mode
+		UV_HD: false,		// High dynamic
+		UV_IT: 0		// Integration Time
+	};
+		// constructor() {
+		// 	this.SD = false;
+		// 	this.UV_AF = false;
+		// 	this.UV_TRIG = false;
+		// 	this.UV_HD = false;
+		// 	this.UV_IT = 0;
+		// }
 
-		constructor() {
-			this.SD = false;
-			this.UV_AF = false;
-			this.UV_TRIG = false;
-			this.UV_HD = false;
-			this.UV_IT = 0;
-		}
-
-		get_reg(): uint16 {
-			let ret = ((this.SD ? 0b1 : 0) & 0b1) << 7 |
-				((this.UV_AF ? 0b1 : 0) & 0b1) << 6 |
-				((this.UV_TRIG ? 0b1 : 0) & 0b1) << 5 |
-				((this.UV_HD ? 0b1 : 0) & 0b1) << 4 |
-				(this.UV_IT & 0b111);
-
+		function get_reg(): uint16 {
+			let ret = ((command_register.SD ? 0b1 : 0) & 0b1) << 7 |
+				((command_register.UV_AF ? 0b1 : 0) & 0b1) << 6 |
+				((command_register.UV_TRIG ? 0b1 : 0) & 0b1) << 5 |
+				((command_register.UV_HD ? 0b1 : 0) & 0b1) << 4 |
+				(command_register.UV_IT & 0b111);
 			return 0x0000 | ret;
 		}
-	}
 
 
-	let comm_reg: command_register;
+	// let command_register: command_register;
 
 
 	enum register {
@@ -340,7 +338,7 @@ namespace veml6075 {
 	//% block.loc.cs="nastav čas integrace na %itime"
 	//% group="Setters"
 	export function set_integration_time(itime: integration_time): void {
-		comm_reg.UV_IT = <uint8>itime;
+		command_register.UV_IT = <uint8>itime;
 		_read_delay = 25 * (2 << itime);
 		set_config();
 	}
@@ -363,7 +361,7 @@ namespace veml6075 {
 
 		for (let i = 0; i < <uint8>integration_time.t800ms; i++) {
 			if (_read_delay >= itime || i == <uint8>integration_time.t800ms) {
-				comm_reg.UV_IT = i;
+				command_register.UV_IT = i;
 				break;
 			}
 			_read_delay *= 2;
@@ -378,7 +376,7 @@ namespace veml6075 {
 	//% block.loc.cs="čas integrace"
 	//% group="Getters"
 	export function get_integration_time(): integration_time {
-		return comm_reg.UV_IT;
+		return command_register.UV_IT;
 	}
 
 	//% blockId=veml_hd_set
@@ -386,7 +384,7 @@ namespace veml6075 {
 	//% block.loc.cs="nastav high_dynamic na $hd"
 	//% group="Setters"
 	export function set_high_dynamic(hd: boolean = true): void {
-		comm_reg.UV_HD = hd;
+		command_register.UV_HD = hd;
 		set_config();
 	}
 
@@ -396,7 +394,7 @@ namespace veml6075 {
 	//% block.loc.cs="high_dynamic"
 	//% group="Getters"
 	export function get_high_dynamic(): boolean {
-		return comm_reg.UV_HD;
+		return command_register.UV_HD;
 	}
 
 
@@ -405,7 +403,7 @@ namespace veml6075 {
 	//% block.loc.cs="nastav force mód na $flag"
 	//% group="Setters"
 	function set_forced_mode(flag: boolean = true): void {
-		comm_reg.UV_TRIG = flag;
+		command_register.UV_TRIG = flag;
 		set_config();
 	}
 
@@ -415,7 +413,7 @@ namespace veml6075 {
 	//% block.loc.cs="force mód"
 	//% group="Getters"
 	function get_forced_mode(): boolean {
-		return comm_reg.UV_TRIG;
+		return command_register.UV_TRIG;
 	}
 
 
@@ -425,7 +423,7 @@ namespace veml6075 {
   */
 	
 	function set_config(): void {
-		let reg = comm_reg.get_reg();
+		let reg = get_reg();
 		i2c_write([<uint8>(reg >> 8), <uint8>(reg & 255)]);
 	}
 
