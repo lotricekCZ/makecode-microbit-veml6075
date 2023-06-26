@@ -12,34 +12,26 @@ namespace veml6075 {
 
 
 	/**
- 	* Class to store settings
+ 	* group to store settings
  	*/
 	let command_register = {
 		SD: false,			// Shut Down
 		UV_AF: false,		// Auto or forced
-		UV_TRIG: false,	// Trigger forced mode
+		UV_TRIG: false,		// Trigger forced mode
 		UV_HD: false,		// High dynamic
-		UV_IT: 0		// Integration Time
+		UV_IT: 0			// Integration Time
 	};
-		// constructor() {
-		// 	this.SD = false;
-		// 	this.UV_AF = false;
-		// 	this.UV_TRIG = false;
-		// 	this.UV_HD = false;
-		// 	this.UV_IT = 0;
-		// }
 
-		function get_reg(): uint16 {
-			let ret = ((command_register.SD ? 0b1 : 0) & 0b1) << 7 |
-				((command_register.UV_AF ? 0b1 : 0) & 0b1) << 6 |
-				((command_register.UV_TRIG ? 0b1 : 0) & 0b1) << 5 |
-				((command_register.UV_HD ? 0b1 : 0) & 0b1) << 4 |
-				(command_register.UV_IT & 0b111);
-			return 0x0000 | ret;
-		}
-
-
-	// let command_register: command_register;
+	
+	let coeficients = {
+		///< These values are default for no coverglass
+		uva_a_coeff: 2.22,
+		uva_b_coeff: 1.33,
+		uvb_c_coeff: 2.95,
+		uvb_d_coeff: 1.74,
+		uva_response: 0.001461,
+		uvb_response: 0.002591
+	};
 
 
 	enum register {
@@ -53,15 +45,6 @@ namespace veml6075 {
 	};
 
 
-	let default_coeficients = {
-		///< These values are default for no coverglass
-		uva_a_coeff: 2.22,
-		uva_b_coeff: 1.33,
-		uvb_c_coeff: 2.95,
-		uvb_d_coeff: 1.74,
-		uva_response: 0.001461,
-		uvb_response: 0.002591
-	};
 
 
 	export enum integration_time {
@@ -147,6 +130,16 @@ namespace veml6075 {
 	
 
 
+	function get_reg(): uint16 {
+		let ret = ((command_register.SD ? 0b1 : 0) & 0b1) 	<< 7 |
+			((command_register.UV_AF ? 0b1 : 0) & 0b1) 		<< 6 |
+			((command_register.UV_TRIG ? 0b1 : 0) & 0b1) 	<< 5 |
+			((command_register.UV_HD ? 0b1 : 0) & 0b1) 		<< 4 |
+			(command_register.UV_IT & 0b111);
+		return 0x0000 | ret;
+	}
+
+
  /**
   * Initiates sensor and communication
   * @param {uint8} address i2c address
@@ -168,9 +161,9 @@ namespace veml6075 {
 		i2c_write([<uint8>register.id, 0]);
 		let _ID = i2c_read();
 		
-		set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff,
-			default_coeficients.uvb_c_coeff, default_coeficients.uvb_d_coeff,
-			default_coeficients.uva_response, default_coeficients.uvb_response);
+		set_coefficients(coeficients.uva_a_coeff, coeficients.uva_b_coeff,
+			coeficients.uvb_c_coeff, coeficients.uvb_d_coeff,
+			coeficients.uva_response, coeficients.uvb_response);
 			
 		// TODO: Elegant solution
 		set_integration_time(itime);
@@ -220,22 +213,22 @@ namespace veml6075 {
 				return readUVI();
 			}
 			case veml_fn_get_number.uva_a_coeff: {
-				return default_coeficients.uva_a_coeff;
+				return coeficients.uva_a_coeff;
 			}
 			case veml_fn_get_number.uva_b_coeff: {
-				return default_coeficients.uva_b_coeff;
+				return coeficients.uva_b_coeff;
 			}
 			case veml_fn_get_number.uvb_c_coeff: {
-				return default_coeficients.uvb_c_coeff;
+				return coeficients.uvb_c_coeff;
 			}
 			case veml_fn_get_number.uvb_d_coeff: {
-				return default_coeficients.uvb_d_coeff;
+				return coeficients.uvb_d_coeff;
 			}
 			case veml_fn_get_number.uva_response: {
-				return <number> default_coeficients.uva_response;
+				return <number> coeficients.uva_response;
 			}
 			case veml_fn_get_number.uvb_response: {
-				return <number> default_coeficients.uvb_response;
+				return <number> coeficients.uvb_response;
 			}
 			case veml_fn_get_number.integration_time: {
 				return _read_delay;
@@ -281,33 +274,33 @@ namespace veml6075 {
 	export function set(variable: veml_fn_set, val: number): void {
 		switch (variable) {
 			case veml_fn_set.uva_a_coeff: {
-				set_coefficients(<number>val, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
-					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, default_coeficients.uvb_response);
+				set_coefficients(<number>val, coeficients.uva_b_coeff, coeficients.uvb_c_coeff,
+					coeficients.uvb_d_coeff, coeficients.uva_response, coeficients.uvb_response);
 				break;
 			}
 			case veml_fn_set.uva_b_coeff: {
-				set_coefficients(default_coeficients.uva_a_coeff, <number>val, default_coeficients.uvb_c_coeff,
-					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, default_coeficients.uvb_response);
+				set_coefficients(coeficients.uva_a_coeff, <number>val, coeficients.uvb_c_coeff,
+					coeficients.uvb_d_coeff, coeficients.uva_response, coeficients.uvb_response);
 				break;
 			}
 			case veml_fn_set.uvb_c_coeff: {
-				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, <number>val,
-					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, default_coeficients.uvb_response);
+				set_coefficients(coeficients.uva_a_coeff, coeficients.uva_b_coeff, <number>val,
+					coeficients.uvb_d_coeff, coeficients.uva_response, coeficients.uvb_response);
 				break;
 			}
 			case veml_fn_set.uvb_d_coeff: {
-				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
-					<number>val, default_coeficients.uva_response, default_coeficients.uvb_response);
+				set_coefficients(coeficients.uva_a_coeff, coeficients.uva_b_coeff, coeficients.uvb_c_coeff,
+					<number>val, coeficients.uva_response, coeficients.uvb_response);
 				break;
 			}
 			case veml_fn_set.uva_response: {
-				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
-					default_coeficients.uvb_d_coeff, <number>val, default_coeficients.uvb_response);
+				set_coefficients(coeficients.uva_a_coeff, coeficients.uva_b_coeff, coeficients.uvb_c_coeff,
+					coeficients.uvb_d_coeff, <number>val, coeficients.uvb_response);
 				break;
 			}
 			case veml_fn_set.uvb_response: {
-				set_coefficients(default_coeficients.uva_a_coeff, default_coeficients.uva_b_coeff, default_coeficients.uvb_c_coeff,
-					default_coeficients.uvb_d_coeff, default_coeficients.uva_response, <number>val);
+				set_coefficients(coeficients.uva_a_coeff, coeficients.uva_b_coeff, coeficients.uvb_c_coeff,
+					coeficients.uvb_d_coeff, coeficients.uva_response, <number>val);
 				break;
 			}
 			case veml_fn_set.high_dynamic: {
@@ -444,12 +437,12 @@ namespace veml6075 {
 	//% group="Setters"
 	export function set_coefficients(UVA_A: number, UVA_B: number, UVB_C: number, UVB_D: number,
 		UVA_response: number, UVB_response: number): void {
-		default_coeficients.uva_a_coeff = <number>UVA_A;
-		default_coeficients.uva_b_coeff = <number>UVA_B;
-		default_coeficients.uvb_c_coeff = <number>UVB_C;
-		default_coeficients.uvb_d_coeff = <number>UVB_D;
-		default_coeficients.uva_response = <number>UVA_response;
-		default_coeficients.uvb_response = <number>UVB_response;
+		coeficients.uva_a_coeff = <number>UVA_A;
+		coeficients.uva_b_coeff = <number>UVA_B;
+		coeficients.uvb_c_coeff = <number>UVB_C;
+		coeficients.uvb_d_coeff = <number>UVB_D;
+		coeficients.uva_response = <number>UVA_response;
+		coeficients.uvb_response = <number>UVB_response;
 	}
 
 
@@ -476,7 +469,7 @@ namespace veml6075 {
 	//% group="Getters"
 	export function readUVI(): number {
 		take_reading();
-		return ((_uva * default_coeficients.uva_response) + (_uvb * default_coeficients.uvb_response)) / 2;
+		return ((_uva * coeficients.uva_response) + (_uvb * coeficients.uvb_response)) / 2;
 	}
 
 
@@ -486,7 +479,7 @@ namespace veml6075 {
 	//% group="Getters"
 	export function readUVABI(): number[] {
 		take_reading();
-		return [_uva, _uvb, ((_uva * default_coeficients.uva_response) + (_uvb * default_coeficients.uvb_response)) / 2];
+		return [_uva, _uvb, ((_uva * coeficients.uva_response) + (_uvb * coeficients.uvb_response)) / 2];
 	}
 
 	
@@ -552,8 +545,8 @@ namespace veml6075 {
 		i2c_write([<uint8>register.uvcomp2, 0]);
 		let _uvcomp2 = i2c_read();
 
-		_uva = _uva_raw - (default_coeficients.uva_a_coeff * _uvcomp1) - (default_coeficients.uva_b_coeff * _uvcomp2);
-		_uvb = _uvb_raw - (default_coeficients.uvb_c_coeff * _uvcomp1) - (default_coeficients.uvb_d_coeff * _uvcomp2);
+		_uva = _uva_raw - (coeficients.uva_a_coeff * _uvcomp1) - (coeficients.uva_b_coeff * _uvcomp2);
+		_uvb = _uvb_raw - (coeficients.uvb_c_coeff * _uvcomp1) - (coeficients.uvb_d_coeff * _uvcomp2);
 	}
 
 
